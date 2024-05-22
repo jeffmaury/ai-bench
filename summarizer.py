@@ -2,9 +2,6 @@
 from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-import requests
-import json
-import os
 import sys
 from datetime import datetime, timedelta
 from getopt import getopt
@@ -28,13 +25,7 @@ def chunk_text(text):
     text_chunks = text_splitter.create_documents([text])
     for chunk in text_chunks:
         chunk = chunk.page_content
-        count = requests.post(f"{model_service[:-2]}extras/tokenize/count",
-                  json={"input":chunk}).content
-        count = json.loads(count)["count"]
-        if count >= 2048:
-            split_append_chunk(chunk, chunks)
-        else:
-            chunks.append(chunk)
+        chunks.append(chunk)
     
     return chunks
 
@@ -46,13 +37,16 @@ def read_file(file):
 
 model_service = "http://localhost:8001/v1"
 file = "fake_meeting.txt"
+model = "granite-7b"
 
-opts, args = getopt(sys.argv[1:],'p:f:',['port=','file='])
+opts, args = getopt(sys.argv[1:],'p:f:m:',['port=','file=','model='])
 for option, argument in opts:
     if option == '-p':
         model_service = f"http://localhost:{argument}/v1"
     if option == '-f':
         file = argument
+    if option == '-m':
+        model = argument
 
 minDuration = timedelta.max
 maxDuration = timedelta.min
@@ -64,6 +58,7 @@ llm = ChatOpenAI(base_url=model_service,
              streaming=False,
              temperature=0.0,
              max_tokens=400,
+             model=model
              )
 
 ### prompt example is from  https://python.langchain.com/docs/use_cases/summarization
